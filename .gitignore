@@ -1,0 +1,130 @@
+# ----------------------------------------
+# Python
+# ----------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+develop-eggs/
+.installed.cfg
+*.manifest
+*.spec
+pip-wheel-metadata/
+wheels/
+*.egg-info/
+*.egg
+*.log
+*.pot
+
+# Byte-compiled / optimized / DLL files
+*.dll
+*.so
+*.dylib
+
+# Unit test / coverage reports
+.coverage
+*.cover
+*.py,cover
+.hypothesis/
+.tox/
+.nox/
+.pytest_cache/
+.coverage.*
+htmlcov/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ----------------------------------------
+# Environments
+# ----------------------------------------
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.env
+
+# Poetry
+poetry.lock
+
+# ----------------------------------------
+# JetBrains / PyCharm
+# ----------------------------------------
+.idea/
+*.iml
+*.iws
+out/
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# AWS / Cloud IDE settings
+.idea/**/aws.xml
+
+# Caches
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+
+# Gradle
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# ----------------------------------------
+# OS-specific
+# ----------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.nfs*
+
+# ----------------------------------------
+# Other tools
+# ----------------------------------------
+# VS Code
+.vscode/
+
+# Local testing
+*.swp
+*.swo

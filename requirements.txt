@@ -1,0 +1,14 @@
+black
+pylint
+mypy
+flake8
+pytest
+httpx
+fastapi
+uvicorn
+pydantic
+coverage
+ruff
+html2text
+beautifulsoup4
+APScheduler
