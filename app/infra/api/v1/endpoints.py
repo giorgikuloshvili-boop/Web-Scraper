@@ -1,8 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from http import HTTPStatus
 
-from app.core.models.schemas import WebScraperResponse
+from app.core.interactor import WebScraperInteractor
+from app.core.scraper.schemas import WebScraperResponse, WebScraperRequest
+from app.infra.dependables import get_core
 
 web_scraper_api = APIRouter()
 
@@ -15,6 +17,6 @@ class WebScraperBase(BaseModel):
                       response_model=WebScraperResponse,
                       status_code=HTTPStatus.CREATED
                       )
-async def scrape_web(request: WebScraperBase) -> WebScraperResponse:
-    pass
+async def scrape_web(request: WebScraperBase, core: WebScraperInteractor = Depends(get_core)) -> WebScraperResponse:
+    return core.run_scraping(request=WebScraperRequest(**request.dict()))
 
