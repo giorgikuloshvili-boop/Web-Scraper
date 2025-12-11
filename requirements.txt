@@ -1,3 +1,4 @@
+pydantic-settings
 starlette
 black
 pylint
