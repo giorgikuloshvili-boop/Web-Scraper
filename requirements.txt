@@ -1,3 +1,5 @@
+selenium
+undetected-chromedriver
 starlette
 black
 pylint

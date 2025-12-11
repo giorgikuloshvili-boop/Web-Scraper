@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from http import HTTPStatus
 
 from app.core.interactor import WebScraperInteractor
-from app.core.scraper.schemas import WebScraperResponse, WebScraperRequest
+from app.core.schemas import WebScraperResponse, WebScraperRequest
 from app.infra.dependables import get_core
 
 web_scraper_api = APIRouter()
