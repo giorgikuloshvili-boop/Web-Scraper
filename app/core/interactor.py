@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from app.core.scraper.schemas import WebScraperRequest, WebScraperResponse
+from app.core.schemas import WebScraperRequest, WebScraperResponse
 
 
 @dataclass
