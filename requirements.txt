@@ -1,3 +1,5 @@
+selenium
+undetected-chromedriver
 markdownify
 aiofiles
 pydantic-settings
