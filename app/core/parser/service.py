@@ -1,0 +1,123 @@
+from typing import Protocol, Any, Dict
+
+from bs4 import BeautifulSoup
+
+from app.core.parser.exceptions import ParsingException
+
+
+class IParserService(Protocol):
+    """
+        Interface Base Class defining the contract for parsing services.
+        Adheres to the Open/Closed Principle.
+    """
+    async def parse(self, html: str) -> Dict[str, Any]:
+        """Parse raw HTML and extract extraction-ready structure."""
+        pass
+
+    async def clean(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Clean extracted data by removing noise and duplicates."""
+        pass
+
+
+class WebsiteParserService(IParserService):
+    """
+        Concrete implementation of IParserService using BeautifulSoup.
+    """
+
+    NOISE_TAGS = [
+        "script",
+        "style",
+        "iframe",
+        "noscript",
+        "meta",
+        "link",
+        "svg",
+        "form",
+        "input",
+        "button",
+    ]
+
+    BOILERPLATE_TAGS = ["header", "footer", "nav", "aside"]
+
+    async def parse(self, html: str) -> Dict[str, Any]:
+        """
+        Parses HTML into a dictionary structure.
+
+        Args:
+            html: Raw HTML string
+
+        Returns:
+            Dict containing title, meta_description, and raw content body.
+
+        Raises:
+            ParsingError: If HTML cannot be processed.
+        """
+        if not html:
+            raise ParsingException("Empty HTML content provided")
+
+        try:
+            soup = BeautifulSoup(html, "html.parser")
+            title = soup.title.string if soup.title else "No title"
+
+            meta_description_tag = soup.find("meta", attrs={"name": "description"})
+            meta_description = meta_description_tag["content"] if meta_description_tag else ""
+
+            body_content = str(soup.body) if soup.body else str(soup)
+
+            return {
+                "title": title.strip(),
+                "metadata": {
+                    "description" : meta_description,
+                },
+                "content": body_content,
+            }
+        except Exception as e:
+            raise ParsingException(f"Failed to parse HTML: {str(e)}", original_error=e)
+
+    async def clean(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Sanitizes the HTML content.
+
+        Operations:
+        - Removes scripts, styles, and non-content elements.
+        - Removes headers, footers, and navigation (duplicates).
+        - Preserves images and main content.
+
+        Args:
+            data: The dictionary output from parse()
+
+        Returns:
+            Dict with 'cleaned_content' added.
+        """
+
+        try:
+            raw_html = data.get("content", "")
+            if not raw_html:
+                return {**data, "cleaned_content": ""}
+
+            soup = BeautifulSoup(raw_html, "html.parser")
+
+            for tag_name in self.NOISE_TAGS:
+                for tag in soup.find_all(tag_name):
+                    tag.decompose()
+
+            for tag_name in self.BOILERPLATE_TAGS:
+                for tag in soup.find_all(tag_name):
+                    tag.decompose()
+
+            for tag in soup.find_all(True):
+                attrs = dict(tag.attrs)
+                allowed_attrs = ["src", "href", "alt", "title"]
+                for attr in attrs:
+                    if attr not in allowed_attrs:
+                        del tag[attr]
+
+            cleaned_html = str(soup)
+
+            return {
+                **data,
+                "cleaned_content": cleaned_html
+            }
+
+        except Exception as e:
+            raise ParsingException(f"Failed to clean HTML content: {str(e)}", original_error=e)
