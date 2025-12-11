@@ -1,3 +1,4 @@
+markdownify
 aiofiles
 pydantic-settings
 starlette
