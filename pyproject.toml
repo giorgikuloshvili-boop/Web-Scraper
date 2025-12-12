@@ -1,6 +1,62 @@
 [project]
-name = "web-scraper"
-version = "0.1.0"
-description = "Add your description here"
+name = "fastapi-scraper"
+version = "1.0.0"
+description = "FastAPI application that scrapes websites, converts content to markdown, and stores data."
+readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "httpx[http2]>=0.27.0",
+    "beautifulsoup4>=4.12.3",
+    "markdownify>=0.12.1",
+    "apscheduler>=3.10.4",
+    "pydantic-settings>=2.2.1",
+    "python-dotenv>=1.0.1",
+    "tenacity>=8.2.3",
+    "aiofiles>=23.2.1",
+    "pytest-asyncio>=0.23.6",
+    "types-beautifulsoup4>=4.12.0.20240229",
+    "types-aiofiles>=23.2.0.20240311",
+    "curl-cffi>=0.13.0",
+    "undetected-chromedriver>=3.5.5",
+    "selenium>=4.38.0",
+    "pylint>=4.0.4",
+    "coverage>=7.13.0",
+    "ruff>=0.14.8",
+    "html2text>=2025.4.15",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.1.1",
+    "pytest-asyncio>=0.23.6",
+    "black>=24.3.0",
+    "flake8>=7.0.0",
+    "mypy>=1.9.0",
+    "isort>=5.13.2",
+    "types-beautifulsoup4>=4.12.0.20240229",
+    "types-aiofiles>=23.2.0.20240311",
+]
+
+# Black Configuration
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+# isort Configuration
+[tool.isort]
+profile = "black"
+line_length = 88
+
+# MyPy Configuration
+[tool.mypy]
+strict = true
+python_version = "3.11"
+ignore_missing_imports = true
+
+# Pytest Configuration
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]

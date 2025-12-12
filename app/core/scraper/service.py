@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from threading import Lock
-from typing import List, Optional
+from typing import List, Optional, Protocol
 
 import undetected_chromedriver as uc
 from selenium.common import WebDriverException
@@ -13,7 +13,27 @@ from selenium.webdriver.common.by import By
 logger = logging.getLogger(__name__)
 
 
-class ScraperService:
+class IScraperService(Protocol):
+    """
+       Interface for scraper services.
+       Designed to support implementation using all modules
+   """
+    async def start_session(self) -> bool:
+        pass
+
+    async def stop_session(self) -> None:
+        pass
+
+    async def fetch_page(self, url: str) -> Optional[str]:
+        pass
+
+    async def extract_links(self, url: str) -> List[str]:
+        pass
+
+
+
+
+class SeleniumScraperService(IScraperService):
     """
     Service responsible ONLY for Browser Automation.
     It exposes async methods that internally handle the blocking Selenium operations.
@@ -31,9 +51,9 @@ class ScraperService:
     ]
 
     def __init__(self):
-        self.driver: Optional[uc.Chrome] = None
-        self.driver_lock = Lock()
-        self.window_lock = Lock()
+        self._driver: Optional[uc.Chrome] = None
+        self._driver_lock = Lock()
+        # self.window_lock = Lock()
 
     async def start_session(self) -> bool:
         """
@@ -41,7 +61,7 @@ class ScraperService:
         """
         return await asyncio.to_thread(self._init_driver_sync)
 
-    async def stop_session(self):
+    async def stop_session(self) -> None:
         """
         Async wrapper to quit the browser.
         """
@@ -53,7 +73,7 @@ class ScraperService:
         """
         return await asyncio.to_thread(self._fetch_page_sync, url)
 
-    async def extract_links(self, url: str, html: str) -> List[str]:
+    async def extract_links(self, url: str) -> List[str]:
         """
         Async wrapper to extract links.
         Note: We use BeautifulSoup here or Selenium. Since we have HTML,
@@ -67,7 +87,7 @@ class ScraperService:
 
     def _init_driver_sync(self) -> bool:
         try:
-            if self.driver:
+            if self._driver:
                 return True
 
             options = ChromeOptions()
@@ -79,7 +99,7 @@ class ScraperService:
             options.add_argument("--disable-extensions")
             options.page_load_strategy = "eager"
 
-            self.driver = uc.Chrome(
+            self._driver = uc.Chrome(
                 options=options,
                 use_subprocess=True,
                 version_main=142
@@ -89,35 +109,35 @@ class ScraperService:
             logger.error(f"Failed to init driver: {e}")
             return False
 
-    def _quit_driver_sync(self):
-        if self.driver:
+    def _quit_driver_sync(self) -> None:
+        if self._driver:
             logger.info("Closing Chrome driver...")
             try:
-                self.driver.quit()
+                self._driver.quit()
             except WebDriverException:
                 pass
             except Exception as e:
                 logger.warning(f"Unexpected error closing driver: {e}")
-            self.driver = None
+            self._driver = None
 
     def _fetch_page_sync(self, url: str) -> Optional[str]:
         """
         Opens a tab, navigates, checks for blockers, returns HTML, closes tab.
         Protected by locks.
         """
-        if not self.driver:
+        if not self._driver:
             return None
 
         window_handle = None
         html_content = None
 
         try:
-            with self.driver_lock:
-                self.driver.execute_script("window.open('');")
+            with self._driver_lock:
+                self._driver.execute_script("window.open('');")
                 time.sleep(0.2)
-                window_handle = self.driver.window_handles[-1]
-                self.driver.switch_to.window(window_handle)
-                self.driver.get(url)
+                window_handle = self._driver.window_handles[-1]
+                self._driver.switch_to.window(window_handle)
+                self._driver.get(url)
 
             html_content = self._wait_for_load_sync(window_handle)
 
@@ -125,12 +145,12 @@ class ScraperService:
             logger.warning(f"Fetch failed for {url}: {e}")
         finally:
             try:
-                with self.driver_lock:
-                    if window_handle and window_handle in self.driver.window_handles:
-                        self.driver.switch_to.window(window_handle)
-                        self.driver.close()
-                        if len(self.driver.window_handles) > 0:
-                            self.driver.switch_to.window(self.driver.window_handles[0])
+                with self._driver_lock:
+                    if window_handle and window_handle in self._driver.window_handles:
+                        self._driver.switch_to.window(window_handle)
+                        self._driver.close()
+                        if len(self._driver.window_handles) > 0:
+                            self._driver.switch_to.window(self._driver.window_handles[0])
             except WebDriverException:
                 pass
             except Exception as e:
@@ -142,16 +162,16 @@ class ScraperService:
         try:
             time.sleep(1.0)
 
-            with self.driver_lock:
-                self.driver.switch_to.window(window_handle)
-                html = self.driver.page_source
+            with self._driver_lock:
+                self._driver.switch_to.window(window_handle)
+                html = self._driver.page_source
 
             attempts = 0
             while any(ind in html for ind in self.BLOCK_INDICATORS) and attempts < 10:
                 time.sleep(0.5)
-                with self.driver_lock:
-                    self.driver.switch_to.window(window_handle)
-                    html = self.driver.page_source
+                with self._driver_lock:
+                    self._driver.switch_to.window(window_handle)
+                    html = self._driver.page_source
                 attempts += 1
 
             if any(ind in html for ind in self.BLOCK_INDICATORS):
@@ -175,8 +195,8 @@ class ScraperService:
         """
         target_links = set()
         try:
-            with self.driver_lock:
-                elements = self.driver.find_elements(By.TAG_NAME, "a")
+            with self._driver_lock:
+                elements = self._driver.find_elements(By.TAG_NAME, "a")
                 for link in elements:
                     try:
                         href = link.get_attribute("href")
