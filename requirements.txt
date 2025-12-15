@@ -9,6 +9,9 @@ pylint
 mypy
 flake8
 pytest
+pytest-asyncio
+pytest-mock
+pytest-cov
 httpx
 fastapi
 uvicorn
