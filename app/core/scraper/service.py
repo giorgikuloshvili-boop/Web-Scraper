@@ -9,15 +9,17 @@ from selenium.common import WebDriverException
 from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.by import By
 
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class IScraperService(Protocol):
     """
-       Interface for scraper services.
-       Designed to support implementation using all modules
-   """
+    Interface for scraper services.
+    Designed to support implementation using all modules
+    """
+
     async def start_session(self) -> bool:
         pass
 
@@ -29,8 +31,6 @@ class IScraperService(Protocol):
 
     async def extract_links(self, url: str) -> List[str]:
         pass
-
-
 
 
 class SeleniumScraperService(IScraperService):
@@ -50,45 +50,35 @@ class SeleniumScraperService(IScraperService):
         "Verify you are human"
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._driver: Optional[uc.Chrome] = None
         self._driver_lock = Lock()
-        # self.window_lock = Lock()
 
     async def start_session(self) -> bool:
-        """
-        Async wrapper to initialize the browser.
-        """
+        """Async wrapper to initialize the browser."""
         return await asyncio.to_thread(self._init_driver_sync)
 
     async def stop_session(self) -> None:
-        """
-        Async wrapper to quit the browser.
-        """
+        """Async wrapper to quit the browser."""
         await asyncio.to_thread(self._quit_driver_sync)
 
     async def fetch_page(self, url: str) -> Optional[str]:
-        """
-        Async wrapper for the complex tab-management logic.
-        """
+        """Async wrapper for the complex tab-management logic."""
         return await asyncio.to_thread(self._fetch_page_sync, url)
 
     async def extract_links(self, url: str) -> List[str]:
-        """
-        Async wrapper to extract links.
-        Note: We use BeautifulSoup here or Selenium. Since we have HTML,
-        using a lightweight parser is better, but to stick to your Selenium pattern
-        we can use the driver if we are still on that page, OR just parse the HTML text.
-
-        For reliability (since driver might have moved on), let's parse the HTML text
-        or use the driver if locked. Let's use the driver logic you had.
-        """
+        """Async wrapper to extract links."""
         return await asyncio.to_thread(self._extract_links_sync, url)
+
 
     def _init_driver_sync(self) -> bool:
         try:
             if self._driver:
+                logger.debug("Driver already initialized, skipping.")
                 return True
+
+            logger.info("Initializing Chrome Driver...")
+            start_time = time.time()
 
             options = ChromeOptions()
             options.add_argument("--no-sandbox")
@@ -104,9 +94,15 @@ class SeleniumScraperService(IScraperService):
                 use_subprocess=True,
                 version_main=142
             )
+
+            self._driver.set_page_load_timeout(settings.REQUEST_TIMEOUT)
+
+            duration = time.time() - start_time
+            logger.info(f"Driver initialized successfully in {duration:.2f}s")
             return True
+
         except Exception as e:
-            logger.error(f"Failed to init driver: {e}")
+            logger.error(f"Failed to init driver: {e}", exc_info=True)
             return False
 
     def _quit_driver_sync(self) -> None:
@@ -114,11 +110,14 @@ class SeleniumScraperService(IScraperService):
             logger.info("Closing Chrome driver...")
             try:
                 self._driver.quit()
+                logger.info("Driver closed.")
             except WebDriverException:
                 pass
             except Exception as e:
-                logger.warning(f"Unexpected error closing driver: {e}")
+                logger.warning(f"Unexpected error closing driver: {e}", exc_info=True)
             self._driver = None
+        else:
+            logger.debug("Quit called but driver was None.")
 
     def _fetch_page_sync(self, url: str) -> Optional[str]:
         """
@@ -126,35 +125,50 @@ class SeleniumScraperService(IScraperService):
         Protected by locks.
         """
         if not self._driver:
+            logger.error("Attempted to fetch page with no active driver.")
             return None
 
         window_handle = None
         html_content = None
+        start_time = time.time()
 
         try:
             with self._driver_lock:
+                logger.debug(f"Opening new tab for: {url}")
                 self._driver.execute_script("window.open('');")
                 time.sleep(0.2)
+
                 window_handle = self._driver.window_handles[-1]
                 self._driver.switch_to.window(window_handle)
+
+                logger.info(f"Navigating to: {url}")
                 self._driver.get(url)
 
             html_content = self._wait_for_load_sync(window_handle)
 
+            if html_content:
+                duration = time.time() - start_time
+                size_kb = len(html_content) / 1024
+                logger.info(f"Fetched {url} in {duration:.2f}s (Size: {size_kb:.1f} KB)")
+            else:
+                logger.warning(f"Fetched {url} but content was empty or blocked.")
+
         except Exception as e:
-            logger.warning(f"Fetch failed for {url}: {e}")
+            logger.warning(f"Fetch failed for {url}: {e}", exc_info=True)
         finally:
             try:
                 with self._driver_lock:
                     if window_handle and window_handle in self._driver.window_handles:
+                        logger.debug(f"Closing tab for: {url}")
                         self._driver.switch_to.window(window_handle)
                         self._driver.close()
+
                         if len(self._driver.window_handles) > 0:
                             self._driver.switch_to.window(self._driver.window_handles[0])
             except WebDriverException:
                 pass
             except Exception as e:
-                logger.error(f"Unexpected error cleaning up tab: {e}")
+                logger.error(f"Error cleaning up tab for {url}: {e}", exc_info=True)
 
         return html_content
 
@@ -167,36 +181,42 @@ class SeleniumScraperService(IScraperService):
                 html = self._driver.page_source
 
             attempts = 0
-            while any(ind in html for ind in self.BLOCK_INDICATORS) and attempts < 10:
-                time.sleep(0.5)
+            while any(ind in html for ind in self.BLOCK_INDICATORS) and attempts < 5:
+                logger.debug(f"Potential blocker detected. waiting... (Attempt {attempts + 1}/5)")
+                time.sleep(1.0)
                 with self._driver_lock:
                     self._driver.switch_to.window(window_handle)
                     html = self._driver.page_source
                 attempts += 1
 
-            if any(ind in html for ind in self.BLOCK_INDICATORS):
-                return None
+            for indicator in self.BLOCK_INDICATORS:
+                if indicator in html:
+                    logger.warning(f"Access Denied/Blocked by '{indicator}' on current page.")
+                    return None
 
             return html
 
-        except WebDriverException:
+        except WebDriverException as e:
+            logger.warning(f"WebDriver error during wait: {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected code error in wait_for_load: {e}")
+            logger.error(f"Unexpected error in wait_for_load: {e}", exc_info=True)
             return None
 
     def _extract_links_sync(self, url: str) -> List[str]:
         """
         Uses the driver to find links.
-        Note: This assumes the driver is currently ON the page, or we are just
-        parsing raw strings. Since we closed the tab in fetch_page, we can't
-        use driver.find_elements easily on that specific page context unless
-        we kept it open.
+        WARNING: Relies on driver state. Best used with parser service instead.
         """
         target_links = set()
+        if not self._driver:
+            return []
+
         try:
             with self._driver_lock:
+                logger.debug("Extracting links via Selenium from current page...")
                 elements = self._driver.find_elements(By.TAG_NAME, "a")
+
                 for link in elements:
                     try:
                         href = link.get_attribute("href")
@@ -206,9 +226,12 @@ class SeleniumScraperService(IScraperService):
                     except WebDriverException:
                         continue
                     except Exception as e:
-                        logger.warning(f"Error parsing link: {e}")
+                        logger.warning(f"Error parsing specific link: {e}")
                         continue
+
+            logger.info(f"Extracted {len(target_links)} valid links from DOM.")
+
         except Exception as e:
-            logger.error(f"Link extraction failed: {e}")
+            logger.error(f"Link extraction failed: {e}", exc_info=True)
 
         return list(target_links)

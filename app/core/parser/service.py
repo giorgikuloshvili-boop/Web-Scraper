@@ -1,6 +1,7 @@
-from typing import Protocol, Any, Dict
+from typing import Protocol, Any, Dict, List
 
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse, urljoin
 
 from app.core.parser.exceptions import ParsingException
 
@@ -16,6 +17,10 @@ class IParserService(Protocol):
 
     async def clean(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Clean extracted data by removing noise and duplicates."""
+        pass
+
+    async def extract_links(self, html: str, current_url: str, base_domain: str) -> List[str]:
+        """Helper to extract links using BS4"""
         pass
 
 
@@ -121,3 +126,36 @@ class WebsiteParserService(IParserService):
 
         except Exception as e:
             raise ParsingException(f"Failed to clean HTML content: {str(e)}", original_error=e)
+
+
+    async def extract_links(self, html: str, current_url: str, base_domain: str) -> List[str]:
+        """
+        Helper to extract links using BS4
+
+        Args:
+            html: Raw HTML string
+            current_url: Current URL
+            base_domain: Base URL
+
+        Returns:
+            Dict containing links.
+
+        Raises:
+            ParsingError: If HTML cannot be processed.
+        """
+        from bs4 import BeautifulSoup
+        valid_links = []
+        try:
+            soup = BeautifulSoup(html, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                full_url = urljoin(current_url, href)
+                parsed = urlparse(full_url)
+
+                full_url = full_url.split("#")[0].rstrip("/")
+
+                if parsed.netloc == base_domain and parsed.scheme in ["http", "https"]:
+                    valid_links.append(full_url)
+        except Exception as e:
+            raise ParsingException(f"Failed to extract links: {str(e)}", original_error=e)
+        return valid_links

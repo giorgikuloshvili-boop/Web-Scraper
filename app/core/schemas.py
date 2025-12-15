@@ -9,13 +9,18 @@ from pydantic import BaseModel, HttpUrl, Field
 class ResponseStatus(Enum):
     STARTED = "started"
     QUEUED = "queued"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class WebScraperRequest(BaseModel):
     """
     Request payload for triggering a scrape job.
     """
-    url: Optional[HttpUrl] = "https://www.gloworld.com/"
+    url: Optional[HttpUrl] = Field(
+        default=None,
+        description="Target website URL. If not provided, uses the default configured TARGET_URL."
+    )
     force: bool = Field(
         default=False,
         description="Force re-scrape even if data exists."

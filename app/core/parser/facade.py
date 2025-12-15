@@ -7,7 +7,7 @@ class ParserFacade:
     """
     Hides the complexity of the parsing pipeline (Parse -> Clean).
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self._service = WebsiteParserService()
 
     async def extract_clean_content(self, html: str) -> Dict[str, Any]:
