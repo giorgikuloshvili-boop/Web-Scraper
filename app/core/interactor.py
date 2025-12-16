@@ -44,7 +44,7 @@ class WebScraperInteractor:
 
         if not await self.scraper.start_session():
             logger.error(f"Critical: Failed to start browser session for {start_url}")
-            return {"error": f"Failed to start scraper for {request.url}"}
+            return {"processed": 0, "failed": 1, "errors": [f"Failed to start scraper for {request.url}"], "duration": time.time() - start_time}
 
         stats: Dict[str, Any] = {"processed": 0, "failed": 0, "errors": []}
         visited_urls: Set[str] = set()
@@ -84,12 +84,15 @@ class WebScraperInteractor:
             processed = int(stats['processed'])
             speed = processed / duration if duration > 0 else 0
 
+            stats["duration"] = duration # Add duration to stats dictionary
+
             logger.info(
                 f"Job Finished | Duration: {duration:.2f}s | "
                 f"Processed: {processed} | Failed: {stats['failed']} | "
                 f"Speed: {speed:.2f} pages/sec | "
                 f"Total Errors: {len(stats['errors'])}"
             )
+            logger.info(f"Final Stats: {stats}") # Log final stats
 
         return stats
 

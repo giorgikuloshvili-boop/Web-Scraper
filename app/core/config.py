@@ -3,10 +3,10 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
+# BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 class Settings(BaseSettings):
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     APP_NAME: str = "FastAPI Web Scraper"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False

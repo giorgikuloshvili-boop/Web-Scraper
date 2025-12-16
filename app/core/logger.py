@@ -38,7 +38,7 @@ def configure_logging() -> None:
     logging.getLogger("selenium").setLevel(logging.WARNING)
     logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
 
-#
+
 # @contextmanager
 # def task_logging(task_id: str):
 #     """

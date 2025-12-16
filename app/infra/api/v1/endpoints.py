@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, BackgroundTasks, Request, HTTPException
 from pydantic import BaseModel, HttpUrl
 
 from app.core.config import settings
@@ -79,7 +79,7 @@ async def scrape_web(
 
     tasks_store[task_id] = {
         "task_id": task_id,
-        "status": ResponseStatus.QUEUED,
+        "status": ResponseStatus.QUEUED.value,
         "created_at": datetime.now(),
         "url": request.url,
         "triggered_by": client_ip
@@ -90,7 +90,7 @@ async def scrape_web(
     background_tasks.add_task(
         _background_scrape_wrapper,
         task_id=task_id,
-        request=WebScraperRequest(**request.dict()),
+        request=WebScraperRequest(**request.model_dump()), # Use model_dump for Pydantic v2
         core=core,
         tasks_store=tasks_store,
     )
@@ -109,7 +109,10 @@ async def get_status(
         task_id: uuid.UUID,
         tasks_store: Dict[uuid.UUID, Dict[str, Any]] = Depends(get_task_store)
 ) -> Dict[str, Any]:
-    return tasks_store[task_id]
+    try:
+        return tasks_store[task_id]
+    except KeyError:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=f"Task with ID {task_id} not found")
 
 
 
@@ -117,4 +120,3 @@ async def get_status(
                      status_code=HTTPStatus.OK)
 async def get_logs() -> None:
     pass
-
