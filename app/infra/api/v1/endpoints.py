@@ -32,7 +32,7 @@ async def _background_scrape_wrapper(
     try:
         logger.info(f"Task Started | ID: {str_task_id} | URL: {request.url}")
 
-        stats = await core.run_scraping(request=request)
+        stats = await core.run(request=request)
 
         tasks_store[task_id].update({
             "status": "completed",

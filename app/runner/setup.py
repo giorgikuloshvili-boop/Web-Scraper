@@ -7,7 +7,7 @@ from app.core.interactor import WebScraperInteractor
 from app.core.logger import configure_logging
 from app.core.scheduler import start_scheduler, shutdown_scheduler
 from app.infra.api.v1.endpoints import web_scraper_api
-
+from app.infra.api.v2.endpoints import chat_bot_api
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ def setup() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(web_scraper_api, prefix="/scraper", tags=["scraper"])
+    app.include_router(chat_bot_api, prefix="/", tags=["chatbot"])
     app.state.core = WebScraperInteractor.create()
     configure_logging()
     return app

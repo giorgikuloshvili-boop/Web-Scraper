@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     LOG_FILE: Path = BASE_DIR / "logs" / "scraper.log"
 
+    GOOGLE_API_KEY: str = ""
+    CHROMA_PATH: str = "./chroma_db"
+    DATABASE_URL: str = "sqlite:///./messages.db"
+
+
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),
         env_file_encoding="utf-8",

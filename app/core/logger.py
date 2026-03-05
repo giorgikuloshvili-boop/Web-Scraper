@@ -37,35 +37,3 @@ def configure_logging() -> None:
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("selenium").setLevel(logging.WARNING)
     logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
-
-
-# @contextmanager
-# def task_logging(task_id: str):
-#     """
-#     Context Manager for isolated task logging.
-#     Logs go ONLY to 'logs/task_{id}.log' and NOT to server.log.
-#     """
-#
-#     logger_name = f"app.task.{task_id}"
-#     task_logger = logging.getLogger(logger_name)
-#
-#     task_logger.propagate = False
-#
-#     task_filename = settings.LOG_PATH / f"task_{task_id}.log"
-#
-#     task_handler = RotatingFileHandler(
-#         task_filename,
-#         maxBytes=10 * 1024 * 1024,
-#         backupCount=5,
-#         encoding="utf-8"
-#     )
-#     task_handler.setFormatter(FILE_FORMAT)
-#     task_handler.setLevel(logging.INFO)
-#
-#     task_logger.addHandler(task_handler)
-#
-#     try:
-#         yield task_logger
-#     finally:
-#         task_logger.removeHandler(task_handler)
-#         task_handler.close()

@@ -32,7 +32,7 @@ class WebScraperInteractor:
             storage=FileSystemStorageService(),
         )
 
-    async def run_scraping(self, request: WebScraperRequest) -> Dict[str, Any]:
+    async def run(self, request: WebScraperRequest) -> Dict[str, Any]:
         start_time = time.time()
         start_url = str(request.url) if request.url else settings.TARGET_URL
 
@@ -152,3 +152,46 @@ class WebScraperInteractor:
             except Exception as e:
                 logger.error(f"Pipeline failed for {url}: {e}", exc_info=True)
                 stats["errors"].append(f"{url}: {str(e)}")
+
+
+
+
+
+from sqlalchemy.orm import Session
+from app.core.chatbot.service import ChatbotService
+from app.core.chatbot.models import MessageModel
+from app.core.chatbot.schemas import ChatbotInput, ChatbotResponse
+
+
+class ChatbotInteractor:
+    def __init__(self, db_session: Session):
+        self.db = db_session
+        self.service = ChatbotService()
+
+    def run(self, input_data: ChatbotInput) -> ChatbotResponse:
+        """
+        Orchestrates the application flow:
+        1. Delegate complex AI logic to ChatbotService.
+        2. Handle database persistence.
+        """
+
+        analysis_result = self.service.process_message(input_data.message)
+
+        db_message = MessageModel(
+            user_text=input_data.message,
+            topic=analysis_result.topic,
+            language=analysis_result.language,
+            sentiment=analysis_result.sentiment,
+            bot_answer=analysis_result.answer
+        )
+
+        self.db.add(db_message)
+        self.db.commit()
+        self.db.refresh(db_message)
+
+        return ChatbotResponse(
+            id=db_message.id,
+            user_message=db_message.user_text,
+            created_at=str(db_message.created_at),
+            analysis=analysis_result
+        )
